@@ -1,5 +1,13 @@
 python-dotenv
-livekit[rtc,agents]
 requests
-livekit-plugins[cartesia,deepgram,silero,groq,noise_cancellation]
-livekit-turn-detector[multilingual]
+livekit[agents,rtc]
+
+# LiveKit Plugins
+livekit-plugins-cartesia
+livekit-plugins-deepgram
+livekit-plugins-silero
+livekit-plugins-groq
+livekit-plugins-noise-cancellation
+
+# Turn Detector
+livekit-plugins-turn-detector
