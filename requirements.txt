@@ -8,6 +8,7 @@ livekit-plugins-deepgram
 livekit-plugins-silero
 livekit-plugins-groq
 livekit-plugins-noise-cancellation
+livekit-plugins-elevenlabs
 
 # Turn Detector
 livekit-plugins-turn-detector
