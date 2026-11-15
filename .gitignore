@@ -1,2 +1,6 @@
 venv/
 .env
+logs/
+__pycache__/
+*.bak
+.DS_Store

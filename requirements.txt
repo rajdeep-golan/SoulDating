@@ -1,14 +1,10 @@
-python-dotenv
-requests
-livekit[agents,rtc]
-
-# LiveKit Plugins
-livekit-plugins-cartesia
-livekit-plugins-deepgram
-livekit-plugins-silero
-livekit-plugins-groq
-livekit-plugins-noise-cancellation
-livekit-plugins-elevenlabs
-
-# Turn Detector
-livekit-plugins-turn-detector
+livekit==1.2.1
+livekit-agents==1.8.12
+livekit-api==1.2.3
+livekit-protocol==1.1.32
+livekit-plugins-deepgram==1.8.12
+livekit-plugins-elevenlabs==1.8.12
+livekit-plugins-groq==1.8.12
+livekit-plugins-silero==1.8.12
+python-dotenv==1.2.4
+requests==2.34.2

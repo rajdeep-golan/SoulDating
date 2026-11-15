@@ -15,6 +15,7 @@ from livekit.plugins import (
 
 from message_logger import log_message
 from biodataExtrator import extract_biodata
+from profile_capture import save_call_profile, transcript_from_history
 
 load_dotenv()
 logger = logging.getLogger("soul_agent")
@@ -29,15 +30,18 @@ class SoulInfoAgent(Agent):
                 Specifically, you should ask for the following information:
 
                 1. Name
-                2. Hometown
-                3. Likes
-                4. Dream City
-                5. Dislikes
-                6. Height
+                2. Age
+                3. Gender, and who they would like to be matched with
+                4. Hometown (and where they live now)
+                5. Likes / hobbies
+                6. Dream City
+                7. Dislikes
+                8. Height
+                9. What they are looking for in a relationship (long-term, marriage, casual)
 
                 Start by saying - Let's create your profile. Engage in a natural conversation. Do not ask all the questions at once. Ask one question, and wait for the user's response. Acknowledge the user's response, and then ask the next question.
                 Try to vary your questions, and make them sound natural. For example, do not always say "What is your...".
-                Once you have collected all the information, say "Thank you, I have collected all the information." and end the conversation.
+                Keep every reply short (one or two sentences). Once you have collected all the information, say "Thank you, I have collected all the information. I am finding your best soul matches now!" and end the conversation.
             """,
             stt=stt_engine,
             llm=llm_engine,
@@ -112,12 +116,16 @@ async def entrypoint(ctx: agents.JobContext):
         profanity_filter=False,
     )
 
-    tts_engine = elevenlabs.TTS(
-        voice_id="Zjz30d9v1e5xCxNVTni6",
-        model="eleven_multilingual_v2"
-    )
+    if os.getenv("ELEVEN_API_KEY", "").startswith("sk_"):
+        tts_engine = elevenlabs.TTS(
+            voice_id="Zjz30d9v1e5xCxNVTni6",
+            model="eleven_multilingual_v2"
+        )
+    else:
+        # Fallback voice: Deepgram Aura (uses DEEPGRAM_API_KEY)
+        tts_engine = deepgram.TTS(model="aura-2-thalia-en")
 
-    llm_engine = groq.LLM(model="llama-3.3-70b-versatile")
+    llm_engine = groq.LLM(model="openai/gpt-oss-120b")
     vad_engine = silero.VAD.load()
     turn_detector = "vad" #MultilingualModel()
 
@@ -138,7 +146,25 @@ async def entrypoint(ctx: agents.JobContext):
         turn_detector=turn_detector,
     )
 
+    captured = {"done": False}
+
+    async def _capture_profile(*_):
+        if captured["done"]:
+            return
+        captured["done"] = True
+        transcript = transcript_from_history(session.history)
+        logger.info("capturing profile from %d transcript lines", len(transcript))
+        await asyncio.to_thread(save_call_profile, transcript, ctx.room.name)
+
+    async def _on_close():
+        await _capture_profile()
+        ctx.shutdown(reason="call ended")
+
+    # Hang-up closes the session -> extract profile -> store in DB
+    session.on("close", lambda _ev: asyncio.create_task(_on_close()))
+    ctx.add_shutdown_callback(_capture_profile)
+
     await session.start(agent=agent, room=ctx.room)
 
 if __name__ == "__main__":
-    cli.run_app(WorkerOptions(entrypoint_fnc=entrypoint))
+    cli.run_app(WorkerOptions(entrypoint_fnc=entrypoint, agent_name=os.getenv("AGENT_NAME", "")))
