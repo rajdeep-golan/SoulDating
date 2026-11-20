@@ -167,4 +167,6 @@ async def entrypoint(ctx: agents.JobContext):
     await session.start(agent=agent, room=ctx.room)
 
 if __name__ == "__main__":
-    cli.run_app(WorkerOptions(entrypoint_fnc=entrypoint, agent_name=os.getenv("AGENT_NAME", "")))
+    # AGENT_NAME unset/"auto" = answer website calls (auto-dispatch); any other name = explicit-dispatch test copy
+    _agent_name = os.getenv("AGENT_NAME", "").strip()
+    cli.run_app(WorkerOptions(entrypoint_fnc=entrypoint, agent_name="" if _agent_name.lower() in ("", "auto") else _agent_name))

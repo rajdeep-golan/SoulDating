@@ -10,7 +10,9 @@ It is a [LiveKit Agents](https://docs.livekit.io/agents) worker. It connects to 
 
 When a call ends, the agent extracts the caller's profile from the transcript (`profile_capture.py`). It saves a copy under `logs/profiles/` and sends the profile to the website's database at `/api/profiles`.
 
-> **"Call Zoey" only works while this backend is running.** It doesn't matter whether it runs on a Mac or on LiveKit Cloud. If no backend is running, the call screen opens but Zoey never joins.
+> **Where it runs now:** on **LiveKit Cloud** (section 4), always on, free plan. The Mac service (section 3) is a stopped backup.
+>
+> **"Call Zoey" only works while a backend is running.** It doesn't matter whether it runs on a Mac or on LiveKit Cloud. If no backend is running, the call screen opens but Zoey never joins.
 
 ---
 
@@ -144,21 +146,18 @@ set -a; source .env; set +a
 lk agent status
 ```
 
-`AGENT_NAME` controls who can reach the cloud copy:
+`AGENT_NAME` (a cloud secret) controls who can reach the cloud copy:
 
-- **Empty or unset:** it answers website calls, like the Mac service.
-- **`AGENT_NAME=zoey-cloud-test` (current setting):** test-only. Website calls never reach it.
+- **`auto` (current setting) or unset:** it answers website calls, like the Mac service.
+- **Any other name, e.g. `zoey-cloud-test`:** test-only. Website calls never reach it; it only joins rooms it is explicitly dispatched to.
 
-To make the cloud copy answer website calls, upload the secrets. That restarts the agent. `AGENT_NAME=` is left empty on purpose, which turns test-only mode off:
+To change it (this restarts the agent), put every secret in a file and upload it. `lk` refuses empty values, which is why `auto` exists:
 
 ```bash
-lk agent update-secrets \
-  --secrets DEEPGRAM_API_KEY=$DEEPGRAM_API_KEY \
-  --secrets GROQ_API_KEY=$GROQ_API_KEY \
-  --secrets ZOEY_INGEST_URL=$ZOEY_INGEST_URL \
-  --secrets ZOEY_INGEST_SECRET=$ZOEY_INGEST_SECRET \
-  --secrets AGENT_NAME=
+lk agent update-secrets --secrets-file cloud-secrets.env
 ```
+
+`cloud-secrets.env` needs `DEEPGRAM_API_KEY`, `GROQ_API_KEY`, `ELEVEN_API_KEY` (optional), `ZOEY_INGEST_URL`, `ZOEY_INGEST_SECRET` and `AGENT_NAME`. Delete the file afterwards.
 
 Deploy a new version after changing code:
 
@@ -172,7 +171,9 @@ Watch the cloud logs:
 lk agent logs
 ```
 
-If the Mac service and the cloud copy both answer website calls, LiveKit sends each call to one of them. That's safe, so you can switch over without downtime.
+If the Mac service and the cloud copy both answer website calls, LiveKit sends each call to one of them. That's safe, so you can start the Mac as a backup at any time (for example if the monthly cloud minutes run out).
+
+**Free-plan limits:** LiveKit Cloud includes 1,000 agent minutes a month (resets monthly, about 200 five-minute calls, up to 5 at once). Groq's free AI quota resets daily and allows roughly 5–7 full calls a day. Deepgram runs on a one-time $200 credit. Hitting any limit makes calls fail; nothing is ever charged.
 
 ## Where the data goes
 
